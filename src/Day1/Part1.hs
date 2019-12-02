@@ -12,7 +12,7 @@ main = do
 
 modules :: IO [Mass]
 modules = do
-  contents <- readFile "./src/Day1/part1Input.txt"
+  contents <- readFile "./src/Day1/input.txt"
   pure . fmap readInt . words $ contents
 
 fuelRequired :: Mass -> Fuel
