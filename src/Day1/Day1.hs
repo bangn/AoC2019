@@ -16,7 +16,10 @@ modules = do
   pure . fmap readInt . words $ contents
 
 fuelRequired :: Mass -> Fuel
-fuelRequired m = m `div` 3 - 2
+fuelRequired m = if frm <= 0
+                    then 0
+                    else frm + fuelRequired frm
+                      where frm = m `div` 3 - 2
 
 readInt :: String -> Mass
 readInt = read
