@@ -9,11 +9,16 @@ type Program = [IntCode]
 
 main :: IO ()
 main = do
-  program <- fetchProgram
+  program <- fetchProgram "./src/Day2/input.txt"
   let result = rebuild (0, setAt (setAt program 1 12) 2 2)
   print . head . snd $ result
   let (noun, verb) = findNounAndVerb program 19690720
   print $ 100 * noun + verb
+
+fetchProgram :: String -> IO Program
+fetchProgram input = do
+  contents <- readFile input
+  pure . fmap (read :: String -> IntCode) . splitOn "," $ contents
 
 findNounAndVerb :: Program -> Int -> (Int, Int)
 findNounAndVerb program expected =
@@ -25,12 +30,6 @@ findNounAndVerb program expected =
           in
             (head . snd $ result) == expected
  ]
-
-
-fetchProgram :: IO Program
-fetchProgram = do
-  contents <- readFile "./src/Day2/input.txt"
-  pure . fmap (read :: String -> IntCode) . splitOn "," $ contents
 
 rebuild :: (Int, Program) -> (Int, Program)
 rebuild (ip, program)=

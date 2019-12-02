@@ -7,12 +7,12 @@ type Fuel = Int
 
 main :: IO ()
 main = do
-  masses <- modules
+  masses <- fetchModules "./src/Day1/input.txt"
   print . sum . fmap fuelRequired $ masses
 
-modules :: IO [Mass]
-modules = do
-  contents <- readFile "./src/Day1/input.txt"
+fetchModules :: String -> IO [Mass]
+fetchModules input = do
+  contents <- readFile input
   pure . fmap readInt . words $ contents
 
 fuelRequired :: Mass -> Fuel
