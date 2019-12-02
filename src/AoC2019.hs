@@ -1,5 +1,5 @@
 module AoC2019
-       ( someFunc
+       ( main
        ) where
 
 main :: IO ()
