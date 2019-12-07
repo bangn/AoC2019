@@ -4,51 +4,51 @@ module Day5 (
 import Data.List.Split
 import System.IO (readFile)
 
-type Program = [Int]
+type InstructionCounter = Int
+type OptCode = Int
+type Program = (InstructionCounter, OptCode, [Int])
+type State = (Int, [Int], Program)
 
 main :: IO ()
 main = do
-  program <- fetchProgram "./src/Day2/input.txt"
-  let result = rebuild (0, setAt (setAt program 1 12) 2 2)
-  print . head . snd $ result
-  let (noun, verb) = findNounAndVerb program 19690720
-  print $ 100 * noun + verb
+  codes <- fetchCodes "./src/Day2/input.txt"
+  let (_, output, (_, _, result)) = run (1, [], (0, head codes, setAt (setAt codes 1 12) 2 2))
+  print output
 
-fetchProgram :: String -> IO Program
-fetchProgram input = do
+fetchCodes :: String -> IO [Int]
+fetchCodes input = do
   contents <- readFile input
   pure . fmap (read :: String -> Int) . splitOn "," $ contents
 
-run :: (Int, Program) -> (Int, Program)
-run (ip, program) =
-  let
-    (optCode, op1, op2) = getOpcodeAndOperans ip program
-    replacePos = program !! (ip + 3)
-   in case optCode of
-        99 -> (ip + 1, program)
-        1  -> run(ip + 4, setAt program replacePos $ op1 + op2)
-        2  -> run(ip + 4, setAt program replacePos $ op1 * op2)
-        _  -> undefined
+run :: State -> State
+run (input, output, (ic, 99, codes)) = (input, output, (ic + 1, 99, codes))
+run (input, output, p@(ic, optCode, codes)) =
+  case optCode of
+    1 -> let nextIc = ic + 4
+             nextOptCode = getAt p nextIc
+             replacePos = getAt p (nextIc - 1)
+             operand1 = getAt p $ getAt p (ic + 1)
+             operand2 = getAt p $ getAt p (ic + 2)
+          in run (input, output, (nextIc, nextOptCode, setAt codes replacePos (operand1 + operand2)))
+    2 -> let nextIc = ic + 4
+             nextOptCode = getAt p nextIc
+             replacePos = getAt p (nextIc - 1)
+             operand1 = getAt p $ getAt p (ic + 1)
+             operand2 = getAt p $ getAt p (ic + 2)
+          in run (input, output, (nextIc, nextOptCode, setAt codes replacePos (operand1 * operand2)))
+    3 -> let nextIc = ic + 2
+             replacePos = getAt p (nextIc - 1)
+             nextOptCode = getAt p nextIc
+          in run (input, output, (nextIc, nextOptCode, setAt codes replacePos input))
+    4 -> let nextIc = ic + 2
+             nextOptCode = getAt p nextIc
+             outputValue = getAt p (getAt p (ic + 1))
+          in run (input, output ++ [outputValue], (nextIc, nextOptCode, codes))
 
-getOpcodeAndOperans :: Int -> Program -> (Int, Int, Int)
-getOpcodeAndOperans ip program = (optCode, operand1, operand2)
-  where optCode = program !! ip
-        operand1 = program !! (program !! (ip + 1))
-        operand2 = program !! (program !! (ip + 2))
+getAt :: Program -> Int -> Int
+getAt (_, _, codes) at = codes !! at
 
 setAt :: [a] -> Int -> a -> [a]
 setAt xs n x =
   let (xs', _:xs'') = splitAt n xs
    in xs' ++ [x] ++ xs''
-
-findNounAndVerb :: Program -> Int -> (Int, Int)
-findNounAndVerb program expected =
-  head [
-    (noun, verb) |
-      noun <- [0..99],
-      verb <- [0..99],
-        let result = rebuild (0, setAt (setAt program 1 noun) 2 verb)
-          in
-            (head . snd $ result) == expected
- ]
-
