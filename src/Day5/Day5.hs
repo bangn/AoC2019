@@ -1,18 +1,21 @@
 module Day5 (
 ) where
 
+import Data.Char (digitToInt)
 import Data.List.Split
 import System.IO (readFile)
 
 type InstructionCounter = Int
-type OptCode = Int
-type Program = (InstructionCounter, OptCode, [Int])
+type Program = (InstructionCounter, [Int])
 type State = (Int, [Int], Program)
+
+data Opcode = Plus | Mulitply | In | Out | Stop
+  deriving (Eq, Enum, Ord, Show)
 
 main :: IO ()
 main = do
-  codes <- fetchCodes "./src/Day2/input.txt"
-  let (_, output, (_, _, result)) = run (1, [], (0, head codes, setAt (setAt codes 1 12) 2 2))
+  codes <- fetchCodes "./src/Day5/input.txt"
+  let (input, output, (nextIc, result)) = run (1, [], (0, codes))
   print output
 
 fetchCodes :: String -> IO [Int]
@@ -21,32 +24,56 @@ fetchCodes input = do
   pure . fmap (read :: String -> Int) . splitOn "," $ contents
 
 run :: State -> State
-run (input, output, (ic, 99, codes)) = (input, output, (ic + 1, 99, codes))
-run (input, output, p@(ic, optCode, codes)) =
-  case optCode of
-    1 -> let nextIc = ic + 4
-             nextOptCode = getAt p nextIc
-             replacePos = getAt p (nextIc - 1)
-             operand1 = getAt p $ getAt p (ic + 1)
-             operand2 = getAt p $ getAt p (ic + 2)
-          in run (input, output, (nextIc, nextOptCode, setAt codes replacePos (operand1 + operand2)))
-    2 -> let nextIc = ic + 4
-             nextOptCode = getAt p nextIc
-             replacePos = getAt p (nextIc - 1)
-             operand1 = getAt p $ getAt p (ic + 1)
-             operand2 = getAt p $ getAt p (ic + 2)
-          in run (input, output, (nextIc, nextOptCode, setAt codes replacePos (operand1 * operand2)))
-    3 -> let nextIc = ic + 2
-             replacePos = getAt p (nextIc - 1)
-             nextOptCode = getAt p nextIc
-          in run (input, output, (nextIc, nextOptCode, setAt codes replacePos input))
-    4 -> let nextIc = ic + 2
-             nextOptCode = getAt p nextIc
-             outputValue = getAt p (getAt p (ic + 1))
-          in run (input, output ++ [outputValue], (nextIc, nextOptCode, codes))
+run (input, output, p@(ic, codes)) =
+    let (opcode, modes, inOffs, outOffs) = decode $ getAt p ic 0
+        ins = fmap (getAt p ic) inOffs
+        outs = fmap (getAt p ic) outOffs
+        args = getAtM p <$> zip modes ins
+        (output', codes') = exec opcode args outs
+        nextIc = ic + length inOffs + length outOffs + 1
+     in if opcode == Stop
+        then (input, output, (nextIc, codes'))
+        else run (input, output', (nextIc, codes'))
+  where
+    exec :: Opcode -> [Int] -> [Int] -> ([Int], [Int])
+    exec op args outs =
+      case op of
+       Plus     -> (output, setAt codes (head outs) (sum args))
+       Mulitply -> (output, setAt codes (head outs) (product args))
+       In       -> (output, setAt codes (head outs) input)
+       Out      -> (head args : output, codes)
+       _        -> (output, codes)
 
-getAt :: Program -> Int -> Int
-getAt (_, _, codes) at = codes !! at
+decode :: Int -> (Opcode, [Int], [Int], [Int])
+decode n =
+    let op = opCode n
+    in (op, modes n, fst (inout op), snd (inout op))
+  where
+    inout :: Opcode -> ([Int], [Int])
+    inout op = case op of
+      Plus     -> ([1, 2], [3])
+      Mulitply -> ([1, 2], [3])
+      In       -> ([],     [1])
+      Out      -> ([1],    [])
+      _        -> ([],    [])
+    opCode :: Int -> Opcode
+    opCode 99 = Stop
+    opCode x  = toEnum $ x `mod` 100 - 1
+    modes :: Int -> [Int]
+    modes x = fmap digitToMode [ x `div` 100      -- first param mode
+                               , x `div` 1000     -- second param mode
+                               , x `div` 10000 ]  -- third param mode
+    digitToMode :: Int -> Int
+    digitToMode = fromEnum . odd
+
+getAt :: Program -> Int -> Int -> Int
+getAt (_, codes) ic off = codes !! (ic + off)
+
+getAtM :: Program -> (Int, Int) -> Int
+getAtM (_, codes) (mode, pos) =
+  if mode == 0
+     then codes !! pos
+     else pos
 
 setAt :: [a] -> Int -> a -> [a]
 setAt xs n x =
