@@ -3,20 +3,23 @@ module Day5 (
 
 import Data.Char (digitToInt)
 import Data.List.Split
+import Data.Maybe (fromMaybe)
 import System.IO (readFile)
 
 type InstructionCounter = Int
 type Program = (InstructionCounter, [Int])
 type State = (Int, [Int], Program)
 
-data Opcode = Plus | Mulitply | In | Out | Stop
+data Opcode = NoOp | Plus | Mulitply | In | Out | JIT | JIF | Lt | Eq | Stop
   deriving (Eq, Enum, Ord, Show)
 
 main :: IO ()
 main = do
   codes <- fetchCodes "./src/Day5/input.txt"
-  let (input, output, (nextIc, result)) = run (1, [], (0, codes))
-  print output
+  let (input, output1, (nextIc, result)) = run (1, [], (0, codes))
+  print output1
+  let (input, output2, (nextIc, result)) = run (5, [], (0, codes))
+  print output2
 
 fetchCodes :: String -> IO [Int]
 fetchCodes input = do
@@ -29,20 +32,32 @@ run (input, output, p@(ic, codes)) =
         ins = fmap (getAt p ic) inOffs
         outs = fmap (getAt p ic) outOffs
         args = getAtM p <$> zip modes ins
-        (output', codes') = exec opcode args outs
-        nextIc = ic + length inOffs + length outOffs + 1
+        (output', codes', maybeNextIc) = exec opcode args outs
+        nextIc = fromMaybe (ic + length inOffs + length outOffs + 1) maybeNextIc
      in if opcode == Stop
         then (input, output, (nextIc, codes'))
         else run (input, output', (nextIc, codes'))
   where
-    exec :: Opcode -> [Int] -> [Int] -> ([Int], [Int])
+    exec :: Opcode -> [Int] -> [Int] -> ([Int], [Int], Maybe InstructionCounter)
     exec op args outs =
       case op of
-       Plus     -> (output, setAt codes (head outs) (sum args))
-       Mulitply -> (output, setAt codes (head outs) (product args))
-       In       -> (output, setAt codes (head outs) input)
-       Out      -> (head args : output, codes)
-       _        -> (output, codes)
+       Plus     -> (output, setAt codes (head outs) (sum args), Nothing)
+       Mulitply -> (output, setAt codes (head outs) (product args), Nothing )
+       In       -> (output, setAt codes (head outs) input, Nothing)
+       Out      -> (head args : output, codes, Nothing)
+       JIT -> let (f:s:_) = args
+                  mni = if f /= 0 then Just s else Nothing
+               in (output, codes, mni)
+       JIF -> let (f:s:_) = args
+                  mni = if f == 0 then Just s else Nothing
+               in (output, codes, mni)
+       Lt -> let (f:s:_) = args
+                 v = if f < s then 1 else 0
+               in (output, setAt codes (head outs) v, Nothing)
+       Eq -> let (f:s:_) = args
+                 v = if f == s then 1 else 0
+               in (output, setAt codes (head outs) v, Nothing)
+       _        -> (output, codes, Nothing)
 
 decode :: Int -> (Opcode, [Int], [Int], [Int])
 decode n =
@@ -55,14 +70,21 @@ decode n =
       Mulitply -> ([1, 2], [3])
       In       -> ([],     [1])
       Out      -> ([1],    [])
-      _        -> ([],    [])
+      JIT      -> ([1, 2], [])
+      JIF      -> ([1, 2], [])
+      Lt       -> ([1, 2], [3])
+      Eq       -> ([1, 2], [3])
+      _        -> ([],     [])
+
     opCode :: Int -> Opcode
     opCode 99 = Stop
-    opCode x  = toEnum $ x `mod` 100 - 1
+    opCode x  = toEnum $ x `mod` 100
+
     modes :: Int -> [Int]
     modes x = fmap digitToMode [ x `div` 100      -- first param mode
                                , x `div` 1000     -- second param mode
                                , x `div` 10000 ]  -- third param mode
+
     digitToMode :: Int -> Int
     digitToMode = fromEnum . odd
 
