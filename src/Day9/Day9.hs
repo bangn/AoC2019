@@ -7,7 +7,7 @@ import System.IO (readFile)
 
 type InstructionCounter = Int
 type Program = (InstructionCounter, [Int])
-type State = (Int, [Int], Program)
+type App = (Int, [Int], Program)
 
 data Opcode = NoOp | Plus | Mulitply | In | Out | JIT | JIF | Lt | Eq | Stop
   deriving (Eq, Enum, Ord, Show)
@@ -25,7 +25,7 @@ fetchCodes input = do
   contents <- readFile input
   pure . fmap (read :: String -> Int) . splitOn "," $ contents
 
-run :: State -> State
+run :: App -> App
 run (input, output, p@(ic, codes)) =
     let (opcode, modes, inOffs, outOffs) = decode $ getAt p ic 0
         ins = fmap (getAt p ic) inOffs
