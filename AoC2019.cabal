@@ -25,9 +25,11 @@ library
 
 
   build-depends:       base ^>= 4.12.0.0
-                     , split >= 0.2.3.3
+                     , combinatorial >= 0.1.0.1
                      , containers >= 0.6.0.1
-
+                     , extra >= 1.6.18
+                     , relude >= 0.6.0.0
+                     , split >= 0.2.3.3
 
   ghc-options:         -Wall
                        -Wincomplete-uni-patterns
