@@ -1,8 +1,6 @@
 module Day10.Day10 (
 ) where
 
-import Combinatorics (tuples)
-import Numeric.Extra (intToFloat)
 import System.IO (readFile)
 
 type Point = (Int, Int)
@@ -41,20 +39,12 @@ directLine p@(x, y) p'@(x', y') =
     (m, n) |
       m <- xx'
       , n <- yy',
-      -- if the angle between (m, n) and p is same as the angle between p p'
-      -- it means that (m, n) is in the line between p and p'
-      -- Use epsilon to compare the 2 float value as it cannot be compared
-      -- directly
-      abs (angle p p' - angle p (m, n)) < epsilon
+      cotan p p' == cotan p (m, n)
   ]
   where
-    epsilon = 0.0000001
     xx' = if x < x' then [x..x'] else [x'..x]
     yy' = if y < y' then [y..y'] else [y'..y]
-    angle p1@(m, n) p2@(m', n') = intToFloat(abs (m - m')) / distance p1 p2
-
-distance :: Point -> Point -> Float
-distance (x, y) (x', y') = sqrt . intToFloat $ (x - x')^2 + (y - y')^2
+    cotan p1@(m, n) p2@(m', n') = toRational (fromIntegral (abs (m - m')) / fromIntegral (abs (n - n')))
 
 removeElem :: Eq a => a -> [a] -> [a]
 removeElem a = filter (/= a)
